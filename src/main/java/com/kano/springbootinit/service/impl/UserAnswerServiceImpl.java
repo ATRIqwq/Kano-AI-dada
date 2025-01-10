@@ -36,8 +36,6 @@ import java.util.stream.Collectors;
 /**
  * 用户答案服务实现
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://www.code-nav.cn">编程导航学习圈</a>
  */
 @Service
 @Slf4j
@@ -53,7 +51,7 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
      * 校验数据
      *
      * @param userAnswer
-     * @param add      对创建的数据进行校验
+     * @param add 对创建的数据进行校验
      */
     @Override
     public void validUserAnswer(UserAnswer userAnswer, boolean add) {
@@ -199,3 +197,10 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
     }
 
 }
+
+
+/**
+ * bean实例化  --> 通过反射创建出对象
+ * 初始化 --> 属性填充，执行各种初始化方法
+ * 完全初始化，存储到单例池
+ */

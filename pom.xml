@@ -115,6 +115,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+<!--        https://github.com/zhipuai/zhipuai-sdk-java-v4-->
+        <dependency>
+            <groupId>cn.bigmodel.openapi</groupId>
+            <artifactId>oapi-java-sdk</artifactId>
+            <version>release-V4-2.3.2</version>
+        </dependency>
     </dependencies>
 
     <build>
