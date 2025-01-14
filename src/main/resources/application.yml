@@ -99,3 +99,7 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.kano.springbootinit.controller
+
+#智普AI
+ai:
+  api-key: 0ff964ebcc6944daaca8a3bb4dab4aef.rhf94vNHugOcoLaA

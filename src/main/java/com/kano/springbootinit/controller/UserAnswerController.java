@@ -74,7 +74,7 @@ public class UserAnswerController {
         userAnswerService.validUserAnswer(userAnswer, true);
         App app = appService.getById(appId);
         ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
-        if (!ReviewStatusEnum.PASS.equals(app.getReviewStatus())) {
+        if (!ReviewStatusEnum.PASS.equals(ReviewStatusEnum.getEnumByValue(app.getReviewStatus()))) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "应用未通过审核");
         }
         // todo 填充默认值
@@ -266,4 +266,7 @@ public class UserAnswerController {
     }
 
     // endregion
+
+
+
 }

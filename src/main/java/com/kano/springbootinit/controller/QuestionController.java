@@ -1,5 +1,6 @@
 package com.kano.springbootinit.controller;
 
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.kano.springbootinit.annotation.AuthCheck;
 import com.kano.springbootinit.common.BaseResponse;
@@ -9,10 +10,8 @@ import com.kano.springbootinit.common.ResultUtils;
 import com.kano.springbootinit.constant.UserConstant;
 import com.kano.springbootinit.exception.BusinessException;
 import com.kano.springbootinit.exception.ThrowUtils;
-import com.kano.springbootinit.model.dto.question.QuestionAddRequest;
-import com.kano.springbootinit.model.dto.question.QuestionEditRequest;
-import com.kano.springbootinit.model.dto.question.QuestionQueryRequest;
-import com.kano.springbootinit.model.dto.question.QuestionUpdateRequest;
+import com.kano.springbootinit.model.dto.ai.AIGenerateQuestionRequest;
+import com.kano.springbootinit.model.dto.question.*;
 import com.kano.springbootinit.model.entity.Question;
 import com.kano.springbootinit.model.entity.User;
 import com.kano.springbootinit.model.vo.QuestionVO;
@@ -24,12 +23,11 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 题目接口
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://www.code-nav.cn">编程导航学习圈</a>
  */
 @RestController
 @RequestMapping("/question")
@@ -57,6 +55,9 @@ public class QuestionController {
         // todo 在此处将实体类和 DTO 进行转换
         Question question = new Question();
         BeanUtils.copyProperties(questionAddRequest, question);
+        List<QuestionContentDTO> questionContent = questionAddRequest.getQuestionContent();
+        question.setQuestionContent(JSONUtil.toJsonStr(questionContent));
+
         // 数据校验
         questionService.validQuestion(question, true);
         // todo 填充默认值
@@ -236,4 +237,20 @@ public class QuestionController {
     }
 
     // endregion
+
+// region AI生成题目
+
+    /**
+     * AI生成题目
+     *
+     * @param aiGenerateQuestionRequest
+     * @return
+     */
+    @PostMapping("/ai_generate")
+    public BaseResponse<List<QuestionContentDTO>> aiGenerateQuestion(@RequestBody AIGenerateQuestionRequest aiGenerateQuestionRequest) {
+        List<QuestionContentDTO> questionContentDTOList = questionService.doAiGenerateQuestion(aiGenerateQuestionRequest);
+        return ResultUtils.success(questionContentDTOList);
+    }
+
+// endregion
 }

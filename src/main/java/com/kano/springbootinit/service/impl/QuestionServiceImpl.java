@@ -1,18 +1,23 @@
 package com.kano.springbootinit.service.impl;
-import java.util.Date;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.kano.springbootinit.common.ErrorCode;
 import com.kano.springbootinit.constant.CommonConstant;
 import com.kano.springbootinit.exception.ThrowUtils;
+import com.kano.springbootinit.manager.AiManager;
 import com.kano.springbootinit.mapper.QuestionMapper;
+import com.kano.springbootinit.model.dto.ai.AIGenerateQuestionRequest;
+import com.kano.springbootinit.model.dto.question.QuestionContentDTO;
 import com.kano.springbootinit.model.dto.question.QuestionQueryRequest;
 import com.kano.springbootinit.model.entity.App;
 import com.kano.springbootinit.model.entity.Question;
 import com.kano.springbootinit.model.entity.User;
+import com.kano.springbootinit.model.enums.AppTypeEnum;
 import com.kano.springbootinit.model.vo.QuestionVO;
 import com.kano.springbootinit.model.vo.UserVO;
 import com.kano.springbootinit.service.AppService;
@@ -26,7 +31,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +49,28 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
 
     @Resource
     private AppService appService;
+
+    @Resource
+    private AiManager aiManager;
+
+    private static final String GENERATE_QUESTION_SYSTEM_MESSAGE = "你是一位严谨的出题专家，我会给你如下信息：\n" +
+            "```\n" +
+            "应用名称，\n" +
+            "【【【应用描述】】】，\n" +
+            "应用类别，\n" +
+            "要生成的题目数，\n" +
+            "每个题目的选项数\n" +
+            "```\n" +
+            "\n" +
+            "请你根据上述信息，按照以下步骤来出题：\n" +
+            "1. 要求：题目和选项尽可能地短，题目不要包含序号，每题的选项数以我提供的为主，题目不能重复\n" +
+            "2. 严格按照下面的 json 格式输出题目和选项\n" +
+            "```\n" +
+            "[{\"options\":[{\"value\":\"选项内容\",\"key\":\"A\"},{\"value\":\"\",\"key\":\"B\"}],\"title\":\"题目标题\"}]\n" +
+            "```\n" +
+            "title 是题目，options 是选项，每个选项的 key 按照英文字母序（比如 A、B、C、D）以此类推，value 是选项内容\n" +
+            "3. 检查题目是否包含序号，若包含序号则去除序号\n" +
+            "4. 返回的题目列表格式必须为 JSON 数组";
 
     /**
      * 校验数据
@@ -176,5 +202,54 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         questionVOPage.setRecords(questionVOList);
         return questionVOPage;
     }
+
+    //region
+
+    /**
+     * AI生成题目
+     * @param aiGenerateQuestionRequest
+     * @return
+     */
+    @Override
+    public List<QuestionContentDTO> doAiGenerateQuestion(AIGenerateQuestionRequest aiGenerateQuestionRequest) {
+        ThrowUtils.throwIf(ObjUtil.isEmpty(aiGenerateQuestionRequest), ErrorCode.PARAMS_ERROR);
+
+        Long appId = aiGenerateQuestionRequest.getAppId();
+        int questionNumber = aiGenerateQuestionRequest.getQuestionNumber();
+        int optionNumber = aiGenerateQuestionRequest.getOptionNumber();
+        // 获取应用信息
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(ObjUtil.isEmpty(app), ErrorCode.NOT_FOUND_ERROR);
+
+        // 封装prompt
+        String userMessage = getGenerateQuestionUserMessage(app,questionNumber,optionNumber);
+
+        // 调用AI生成问题
+        String result = aiManager.doSynUnStableRequest(userMessage, GENERATE_QUESTION_SYSTEM_MESSAGE);
+
+        // 生成结果处理
+        int start = result.indexOf("[");
+        int end = result.lastIndexOf("]");
+        String json = result.substring(start, end + 1);
+        List<QuestionContentDTO> questionContentDTOList = JSONUtil.toList(json, QuestionContentDTO.class);
+        return questionContentDTOList;
+    }
+
+
+    //拼接用户消息
+    private String getGenerateQuestionUserMessage(App app,int questionNumber,int optionNumber){
+        StringBuilder userMessage = new StringBuilder();
+        userMessage.append(app.getAppName()).append("\n");
+        userMessage.append(app.getAppDesc()).append("\n");
+        userMessage.append(AppTypeEnum.getEnumByValue(app.getAppType()).getText()).append("\n");
+        userMessage.append(questionNumber).append("\n");
+        userMessage.append(optionNumber);
+
+        return userMessage.toString();
+    }
+
+
+
+    //endregion
 
 }

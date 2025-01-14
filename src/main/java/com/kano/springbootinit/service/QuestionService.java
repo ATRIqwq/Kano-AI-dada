@@ -3,11 +3,14 @@ package com.kano.springbootinit.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.kano.springbootinit.model.dto.ai.AIGenerateQuestionRequest;
+import com.kano.springbootinit.model.dto.question.QuestionContentDTO;
 import com.kano.springbootinit.model.dto.question.QuestionQueryRequest;
 import com.kano.springbootinit.model.entity.Question;
 import com.kano.springbootinit.model.vo.QuestionVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 题目服务
@@ -50,4 +53,12 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, HttpServletRequest request);
+
+
+    /**
+     * AI生成题目
+     * @param aiGenerateQuestionRequest
+     * @return
+     */
+    List<QuestionContentDTO> doAiGenerateQuestion(AIGenerateQuestionRequest aiGenerateQuestionRequest);
 }

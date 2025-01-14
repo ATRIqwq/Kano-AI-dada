@@ -204,3 +204,8 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
  * 初始化 --> 属性填充，执行各种初始化方法
  * 完全初始化，存储到单例池
  */
+
+/**
+ * jdk动态代理基于接口，要求的对象是有定义的接口，实现invocationHandler接口得到一个切面类,然后Proxy生成代理类，然后所有调用的方法将转移到invoke上，通过反射调目标对象
+ * cglib基于继承，通过继承方式生成代理对象子类，所以fianl修饰的对象不行
+ */
