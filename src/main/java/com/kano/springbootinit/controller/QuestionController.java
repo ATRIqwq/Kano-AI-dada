@@ -10,6 +10,7 @@ import com.kano.springbootinit.common.ResultUtils;
 import com.kano.springbootinit.constant.UserConstant;
 import com.kano.springbootinit.exception.BusinessException;
 import com.kano.springbootinit.exception.ThrowUtils;
+import com.kano.springbootinit.manager.AiManager;
 import com.kano.springbootinit.model.dto.ai.AIGenerateQuestionRequest;
 import com.kano.springbootinit.model.dto.question.*;
 import com.kano.springbootinit.model.entity.Question;
@@ -20,6 +21,7 @@ import com.kano.springbootinit.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +41,9 @@ public class QuestionController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private AiManager aiManager;
 
     // region 增删改查
 
@@ -250,6 +255,17 @@ public class QuestionController {
     public BaseResponse<List<QuestionContentDTO>> aiGenerateQuestion(@RequestBody AIGenerateQuestionRequest aiGenerateQuestionRequest) {
         List<QuestionContentDTO> questionContentDTOList = questionService.doAiGenerateQuestion(aiGenerateQuestionRequest);
         return ResultUtils.success(questionContentDTOList);
+    }
+
+    /**
+     * AI生成题目SSE模式
+     *
+     * @param aiGenerateQuestionRequest
+     * @return
+     */
+    @GetMapping("/ai_generate/sse")
+    public SseEmitter aiGenerateQuestionSSE(AIGenerateQuestionRequest aiGenerateQuestionRequest) {
+        return questionService.doAiGenerateQuestionSSE(aiGenerateQuestionRequest);
     }
 
 // endregion

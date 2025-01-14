@@ -2,6 +2,7 @@ package com.kano.springbootinit.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,16 +25,23 @@ import com.kano.springbootinit.service.AppService;
 import com.kano.springbootinit.service.QuestionService;
 import com.kano.springbootinit.service.UserService;
 import com.kano.springbootinit.utils.SqlUtils;
+import com.zhipu.oapi.service.v4.model.ModelData;
+import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
+import javax.json.Json;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -235,6 +243,66 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         return questionContentDTOList;
     }
 
+    @Override
+    public SseEmitter doAiGenerateQuestionSSE(AIGenerateQuestionRequest aiGenerateQuestionRequest) {
+        ThrowUtils.throwIf(ObjUtil.isEmpty(aiGenerateQuestionRequest), ErrorCode.PARAMS_ERROR);
+
+        Long appId = aiGenerateQuestionRequest.getAppId();
+        int questionNumber = aiGenerateQuestionRequest.getQuestionNumber();
+        int optionNumber = aiGenerateQuestionRequest.getOptionNumber();
+
+        //创建Sse链接对象，0表示永不超时
+        SseEmitter sseEmitter = new SseEmitter(0L);
+
+        // 获取应用信息
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(ObjUtil.isEmpty(app), ErrorCode.NOT_FOUND_ERROR);
+
+        // 封装prompt
+        String userMessage = getGenerateQuestionUserMessage(app,questionNumber,optionNumber);
+
+        //调AI获取数据流
+        Flowable<ModelData> modelDataFlowable = aiManager.doFlowableRequest(userMessage, GENERATE_QUESTION_SYSTEM_MESSAGE, null);
+
+        AtomicInteger counter = new AtomicInteger(0);
+        StringBuilder contentBuilder = new StringBuilder();
+
+        //处理数据流，最后每出一道题就返回一道题
+        modelDataFlowable.observeOn(Schedulers.io())
+                .map(chunk -> chunk.getChoices().get(0).getDelta().getContent())
+                .map(message -> message.replace("\\s","")) //如果该字符是空白字符（如空格、制表符等），则将其替换为空字符串（即删除它）。
+                .filter(StrUtil::isNotBlank)  //过滤空白
+                .flatMap(message ->{
+                    List<Character> characters = new ArrayList<>();
+                    for (char c : message.toCharArray()) {
+                        characters.add(c);
+                    }
+                    return Flowable.fromIterable(characters);
+                })
+                .doOnNext(c -> {
+                    //括号匹配算法
+                    if (c == '{'){
+                        counter.getAndAdd(1);
+                    }
+                    if(counter.get() > 0){
+                        contentBuilder.append(c);
+                    }
+                    if (c == '}'){
+                        counter.getAndAdd(-1);
+                        if(counter.get() == 0){
+                            sseEmitter.send(JSONUtil.toJsonStr(contentBuilder.toString()));
+                            //清空StringBuilder
+                            contentBuilder.setLength(0);
+                        }
+                    }
+                })
+                .doOnComplete(sseEmitter::complete)
+                .doOnError(e -> log.error("doAiGenerateQuestionSSE error:{}",e))
+                .subscribe();
+
+        return sseEmitter;
+    }
+
 
     //拼接用户消息
     private String getGenerateQuestionUserMessage(App app,int questionNumber,int optionNumber){
@@ -247,8 +315,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
 
         return userMessage.toString();
     }
-
-
 
     //endregion
 

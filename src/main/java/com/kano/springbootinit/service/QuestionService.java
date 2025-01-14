@@ -8,6 +8,7 @@ import com.kano.springbootinit.model.dto.question.QuestionContentDTO;
 import com.kano.springbootinit.model.dto.question.QuestionQueryRequest;
 import com.kano.springbootinit.model.entity.Question;
 import com.kano.springbootinit.model.vo.QuestionVO;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -61,4 +62,11 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     List<QuestionContentDTO> doAiGenerateQuestion(AIGenerateQuestionRequest aiGenerateQuestionRequest);
+
+    /**
+     * SSE方式AI生成题目
+     * @param aiGenerateQuestionRequest
+     * @return
+     */
+    SseEmitter doAiGenerateQuestionSSE(AIGenerateQuestionRequest aiGenerateQuestionRequest);
 }

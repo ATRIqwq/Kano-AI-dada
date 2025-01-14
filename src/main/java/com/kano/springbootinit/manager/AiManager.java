@@ -2,10 +2,8 @@ package com.kano.springbootinit.manager;
 
 import com.zhipu.oapi.ClientV4;
 import com.zhipu.oapi.Constants;
-import com.zhipu.oapi.service.v4.model.ChatCompletionRequest;
-import com.zhipu.oapi.service.v4.model.ChatMessage;
-import com.zhipu.oapi.service.v4.model.ChatMessageRole;
-import com.zhipu.oapi.service.v4.model.ModelApiResponse;
+import com.zhipu.oapi.service.v4.model.*;
+import io.reactivex.Flowable;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -85,6 +83,35 @@ public class AiManager {
     }
 
 
+    /**
+     *  响应式请求方法
+     * @param messages 消息列表
+     * @param temperature 随机数（控制生成信息的随机性）
+     * @return
+     */
+    public Flowable<ModelData> doFlowableRequest(List<ChatMessage> messages,Float temperature){
+        // 构造请求
+        ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest.builder()
+                .model(Constants.ModelChatGLM4Plus)
+                .stream(Boolean.TRUE)
+                .temperature(temperature)
+                .invokeMethod(Constants.invokeMethod)
+                .messages(messages)
+                .build();
+        // 调用
+        ModelApiResponse invokeModelApiResp = clientV4.invokeModelApi(chatCompletionRequest);
+        return invokeModelApiResp.getFlowable();
+    }
+
+    public Flowable<ModelData> doFlowableRequest(String userMessage,String systemMessage, Float temperature){
+        List<ChatMessage> messages = new ArrayList<>();
+        ChatMessage systemChatMessage = new ChatMessage(ChatMessageRole.SYSTEM.value(), systemMessage);
+        ChatMessage userChatMessage = new ChatMessage(ChatMessageRole.USER.value(), userMessage);
+        messages.add(systemChatMessage);
+        messages.add(userChatMessage);
+        return doFlowableRequest(messages,temperature);
+
+    }
 }
 
 
